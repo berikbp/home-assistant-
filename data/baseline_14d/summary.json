@@ -1,0 +1,16 @@
+{
+  "method": "BOPTEST_baseline",
+  "comfort_score_24h_percent": 67.85714285714286,
+  "comfort_score_occupied_percent": 58.44155844155844,
+  "sampled_discomfort_24h_Kh": 70.6688382361391,
+  "sampled_discomfort_occupied_Kh": 70.2774015275084,
+  "sampled_hvac_energy_total_kWh": 194.2782026939644,
+  "sampled_hvac_energy_occupied_kWh": 119.45245026331106,
+  "official_tdis_tot": 6.8246808964870205,
+  "official_idis_tot": 1221.7783959198534,
+  "official_ener_tot": 4.226250612177942,
+  "official_cost_tot": 0.05160320934640289,
+  "official_emis_tot": 1.1317865165217658,
+  "official_time_rat": 1.6760110459715176e-06,
+  "real_runtime_seconds": 13.72661288100062
+}

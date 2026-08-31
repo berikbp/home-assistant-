@@ -1,0 +1,38 @@
+{
+  "testcase": "bestest_air",
+  "testid": "b889f9c7-db91-4869-bf0e-489ae2d3f677",
+  "start_time_s": 0,
+  "warmup_period_s": 0,
+  "control_step_s": 3600,
+  "evaluation_days": 14,
+  "evaluation_steps": 336,
+  "version_response": {
+    "status": 200,
+    "message": "Queried the version number successfully.",
+    "payload": {
+      "version": "1.0.0-dev"
+    }
+  },
+  "scenario_response": {
+    "status": 200,
+    "message": "Queried current test case for scenario successfully.",
+    "payload": {
+      "electricity_price": "constant",
+      "temperature_uncertainty": null,
+      "solar_uncertainty": null,
+      "seed": null
+    }
+  },
+  "step_response": {
+    "status": 200,
+    "message": "Queried the control step successfully.",
+    "payload": 3600
+  },
+  "name_response": {
+    "status": 200,
+    "message": "Queried the name of the test case successfully.",
+    "payload": {
+      "name": "bestest_air"
+    }
+  }
+}
