@@ -1,0 +1,120 @@
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 65281)
+Traceback (most recent call last):
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 318, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 349, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 424, in handle_one_request
+    method()
+  File "C:\Users\user\Desktop\projects\RL\scripts\rl_platform.py", line 230, in do_GET
+    n_episodes=len(s.get("rewards", [])),
+                   ^^^^^^^^^^^^^^^^^^^^
+TypeError: State.get() takes 2 positional arguments but 3 were given
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 65282)
+Traceback (most recent call last):
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 318, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 349, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 424, in handle_one_request
+    method()
+  File "C:\Users\user\Desktop\projects\RL\scripts\rl_platform.py", line 230, in do_GET
+    n_episodes=len(s.get("rewards", [])),
+                   ^^^^^^^^^^^^^^^^^^^^
+TypeError: State.get() takes 2 positional arguments but 3 were given
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 52684)
+Traceback (most recent call last):
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 318, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 349, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 424, in handle_one_request
+    method()
+  File "C:\Users\user\Desktop\projects\RL\scripts\rl_platform.py", line 230, in do_GET
+    n_episodes=len(s.get("rewards", [])),
+                   ^^^^^^^^^^^^^^^^^^^^
+TypeError: State.get() takes 2 positional arguments but 3 were given
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 52685)
+Traceback (most recent call last):
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 318, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 349, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 424, in handle_one_request
+    method()
+  File "C:\Users\user\Desktop\projects\RL\scripts\rl_platform.py", line 230, in do_GET
+    n_episodes=len(s.get("rewards", [])),
+                   ^^^^^^^^^^^^^^^^^^^^
+TypeError: State.get() takes 2 positional arguments but 3 were given
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 57996)
+Traceback (most recent call last):
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 318, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 349, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 424, in handle_one_request
+    method()
+  File "C:\Users\user\Desktop\projects\RL\scripts\rl_platform.py", line 230, in do_GET
+    n_episodes=len(s.get("rewards", [])),
+                   ^^^^^^^^^^^^^^^^^^^^
+TypeError: State.get() takes 2 positional arguments but 3 were given
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 57997)
+Traceback (most recent call last):
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 318, in _handle_request_noblock
+    self.process_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 349, in process_request
+    self.finish_request(request, client_address)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\user\AppData\Local\Programs\Python\Python312\Lib\http\server.py", line 424, in handle_one_request
+    method()
+  File "C:\Users\user\Desktop\projects\RL\scripts\rl_platform.py", line 230, in do_GET
+    n_episodes=len(s.get("rewards", [])),
+                   ^^^^^^^^^^^^^^^^^^^^
+TypeError: State.get() takes 2 positional arguments but 3 were given
+----------------------------------------

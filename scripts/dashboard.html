@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HVAC RL Control Platform</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f23;color:#e0e0e0;min-height:100vh}
+.header{background:linear-gradient(135deg,#1a1a3e,#0d2137);padding:20px 30px;border-bottom:2px solid #00d4ff;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:22px;color:#fff}
+.header h1 span{color:#00d4ff}
+.header .sub{font-size:12px;color:#888;margin-top:2px}
+.badge{padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600}
+.badge.ready{background:#1a3a2a;color:#00ff88;border:1px solid #00ff88}
+.badge.training{background:#3a2a0a;color:#ffaa00;border:1px solid #ffaa00;animation:pulse 1.5s infinite}
+.badge.done{background:#1a3a2a;color:#00ff88;border:1px solid #00ff88}
+.badge.error{background:#3a1a1a;color:#ff4444;border:1px solid #ff4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.container{max-width:1400px;margin:0 auto;padding:20px}
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.mc{background:linear-gradient(135deg,#16213e,#1a1a3e);border-radius:12px;padding:16px;border:1px solid #2a2a5a;position:relative;overflow:hidden}
+.mc .label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:4px}
+.mc .val{font-size:24px;font-weight:700}
+.mc .unit{font-size:11px;color:#666;margin-top:2px}
+.mc:nth-child(1) .val{color:#00d4ff}
+.mc:nth-child(2) .val{color:#ff6b6b}
+.mc:nth-child(3) .val{color:#ffd93d}
+.mc:nth-child(4) .val{color:#00ff88}
+.mc:nth-child(5) .val{color:#ff69b4}
+.mc:nth-child(6) .val{color:#9370db}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.card{background:#16213e;border-radius:12px;border:1px solid #2a2a5a;overflow:hidden}
+.card-title{padding:14px 18px;font-size:14px;font-weight:600;color:#aaa;border-bottom:1px solid #1a1a3e;display:flex;justify-content:space-between;align-items:center}
+.card-body{padding:10px}
+.full{grid-column:1/-1}
+.controls{display:grid;grid-template-columns:350px 1fr;gap:16px;margin-bottom:16px}
+.ctrl-card{background:#16213e;border-radius:12px;border:1px solid #2a2a5a;padding:20px}
+.ctrl-card h3{font-size:15px;margin-bottom:12px;color:#00d4ff}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:4px}
+.fg select,.fg input[type=number]{width:100%;padding:8px 10px;background:#0f0f23;border:1px solid #2a2a5a;border-radius:6px;color:#e0e0e0;font-size:13px;outline:none}
+.fg select:focus,.fg input:focus{border-color:#00d4ff}
+.fg input[type=range]{width:100%;accent-color:#00d4ff}
+.btn{width:100%;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;margin-bottom:6px}
+.btn-primary{background:linear-gradient(135deg,#00d4ff,#0088cc);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(0,212,255,.3)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-secondary{background:linear-gradient(135deg,#00ff88,#00cc66);color:#000}
+.btn-secondary:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(0,255,136,.3)}
+.btn-secondary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-compare{background:linear-gradient(135deg,#ffd93d,#cc9900);color:#000}
+.btn-compare:hover{transform:translateY(-1px)}
+.btn-compare:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-sweep{background:linear-gradient(135deg,#9370db,#6a0dad);color:#fff}
+.btn-sweep:hover{transform:translateY(-1px)}
+.btn-sweep:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-export{background:rgba(0,212,255,.1);color:#00d4ff;border:1px solid rgba(0,212,255,.3);padding:5px 12px;font-size:11px;width:auto;display:inline-block;margin:2px}
+.btn-export:hover{background:rgba(0,212,255,.2)}
+.progress{margin-top:10px;background:#0f0f23;border-radius:6px;height:8px;overflow:hidden;display:none}
+.progress-bar{height:100%;background:linear-gradient(90deg,#00d4ff,#00ff88);width:0%;transition:width .3s}
+.progress-text{font-size:12px;color:#888;margin-top:4px;display:none}
+table.ct{width:100%;border-collapse:collapse}
+table.ct th{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;padding:8px 12px;text-align:left;border-bottom:1px solid #2a2a5a}
+table.ct td{padding:8px 12px;border-bottom:1px solid #1a1a3e;font-size:13px}
+table.ct tr:hover{background:rgba(0,212,255,.03)}
+.good{color:#00ff88}
+.bad{color:#ff6b6b}
+.neutral{color:#888}
+.algo-btns{display:flex;gap:6px;margin-bottom:12px}
+.algo-btn{flex:1;padding:8px;border:2px solid #2a2a5a;border-radius:6px;background:transparent;color:#888;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center}
+.algo-btn.active{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.08)}
+.algo-btn:hover{border-color:#00d4ff}
+.status-msg{margin-top:8px;padding:8px;border-radius:6px;font-size:12px;display:none}
+.status-msg.show{display:block}
+.status-msg.training{background:rgba(255,170,0,.1);border:1px solid rgba(255,170,0,.3);color:#ffaa00}
+.status-msg.done{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:#00ff88}
+.status-msg.error{background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.3);color:#ff4444}
+.agents-panel{margin-bottom:16px}
+.agents-panel .card-body{max-height:250px;overflow-y:auto}
+.agent-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #1a1a3e;transition:background .15s}
+.agent-row:hover{background:rgba(0,212,255,.04)}
+.agent-row:last-child{border-bottom:none}
+.agent-name{font-weight:600;font-size:13px;color:#e0e0e0}
+.agent-meta{font-size:10px;color:#666;margin-top:1px}
+.agent-stats{display:flex;gap:12px;font-size:11px;margin-top:2px}
+.agent-stats span{color:#888}
+.agent-stats .good{color:#00ff88}
+.agent-actions{display:flex;gap:4px;align-items:center}
+.agent-actions button{padding:4px 10px;border:none;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-sim{background:rgba(0,212,255,.15);color:#00d4ff;border:1px solid rgba(0,212,255,.3)}
+.btn-sim:hover{background:rgba(0,212,255,.25)}
+.btn-cont{background:rgba(0,255,136,.15);color:#00ff88;border:1px solid rgba(0,255,136,.3)}
+.btn-cont:hover{background:rgba(0,255,136,.25)}
+.btn-del{background:rgba(255,68,68,.1);color:#ff4444;border:1px solid rgba(255,68,68,.2)}
+.btn-del:hover{background:rgba(255,68,68,.2)}
+.agent-cb{width:14px;height:14px;accent-color:#00d4ff;cursor:pointer}
+.empty-msg{text-align:center;padding:16px;color:#555;font-size:12px}
+.toggle-btn{padding:3px 8px;border:1px solid #2a2a5a;border-radius:5px;background:transparent;color:#888;font-size:10px;cursor:pointer;transition:all .15s}
+.toggle-btn.active{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.08)}
+.toggle-btn:hover{border-color:#00d4ff}
+.section-title{font-size:13px;font-weight:600;color:#00d4ff;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid #1a1a3e}
+.occ-grid{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin:6px 0}
+.occ-cell{width:100%;aspect-ratio:1;border-radius:3px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;font-size:8px;color:transparent}
+.occ-cell.occupied{background:#00d4ff;color:#000}
+.occ-cell.unoccupied{background:#2a2a5a;color:#888}
+.occ-cell:hover{transform:scale(1.1)}
+.cost-box{background:#0f0f23;border:1px solid #2a2a5a;border-radius:8px;padding:12px;margin-top:8px}
+.cost-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.cost-row .label{color:#888}
+.cost-row .val{color:#ffd93d;font-weight:600}
+.sweep-result{background:#0f0f23;border:1px solid #2a2a5a;border-radius:6px;padding:8px;margin-top:6px;font-size:11px}
+.sweep-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1a1a3e}
+.sweep-row:last-child{border-bottom:none}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1><span>HVAC</span> RL Control Platform</h1>
+    <div class="sub">Reinforcement Learning for Building Energy Optimization</div>
+  </div>
+  <div class="badge ready" id="badge">Ready</div>
+</div>
+<div class="container">
+  <div class="metrics">
+    <div class="mc"><div class="label">Comfort Score</div><div class="val" id="mComfort">--</div><div class="unit">% hours</div></div>
+    <div class="mc"><div class="label">Energy Use</div><div class="val" id="mEnergy">--</div><div class="unit">kWh/m&sup2;</div></div>
+    <div class="mc"><div class="label">Total Reward</div><div class="val" id="mReward">--</div><div class="unit">cumulative</div></div>
+    <div class="mc"><div class="label">Episodes</div><div class="val" id="mEps">--</div><div class="unit">completed</div></div>
+    <div class="mc"><div class="label">Energy Cost</div><div class="val" id="mCost">--</div><div class="unit">USD</div></div>
+    <div class="mc"><div class="label">Daily Cost</div><div class="val" id="mDayCost">--</div><div class="unit">USD/day</div></div>
+  </div>
+  <div class="controls">
+    <div class="ctrl-card" style="max-height:calc(100vh - 200px);overflow-y:auto">
+      <h3>Training Settings</h3>
+      <div class="algo-btns">
+        <div class="algo-btn active" data-algo="SAC" onclick="pickAlgo(this)">SAC</div>
+        <div class="algo-btn" data-algo="PPO" onclick="pickAlgo(this)">PPO</div>
+        <div class="algo-btn" data-algo="DDPG" onclick="pickAlgo(this)">DDPG</div>
+      </div>
+      <div class="fg"><label>Timesteps</label><input id="inTimesteps" type="number" value="50000" min="1000" step="1000"></div>
+      <div class="fg"><label>Energy Weight <span id="ewVal">0.6</span></label><input id="inEW" type="range" value="0.6" min="0" max="1" step="0.05" oninput="document.getElementById('ewVal').textContent=this.value"></div>
+      <div class="fg"><label>Learning Rate</label><input id="inLR" type="number" value="0.0003" min="0.00001" max="0.01" step="0.0001"></div>
+      <button class="btn btn-primary" id="btnTrain" onclick="startTrain()">Train Agent</button>
+      <button class="btn btn-secondary" id="btnSim" onclick="simulate()">Simulate 14 Days</button>
+      <button class="btn btn-compare" id="btnCompare" onclick="compareSelected()" disabled>Compare Selected</button>
+      <button class="btn btn-sweep" id="btnSweep" onclick="startSweep()">Hyperparameter Sweep</button>
+      <div class="progress" id="prog"><div class="progress-bar" id="progBar"></div></div>
+      <div class="progress-text" id="progText"></div>
+      <div class="status-msg" id="statusMsg"></div>
+
+      <div class="section-title">Occupancy Schedule</div>
+      <div style="font-size:10px;color:#666;margin-bottom:4px">Click to toggle occupied/unoccupied (24h)</div>
+      <div class="occ-grid" id="occGrid"></div>
+      <div style="display:flex;gap:12px;margin-top:4px">
+        <span style="font-size:10px;color:#888"><span style="display:inline-block;width:8px;height:8px;background:#00d4ff;border-radius:2px;vertical-align:middle"></span> Occupied</span>
+        <span style="font-size:10px;color:#888"><span style="display:inline-block;width:8px;height:8px;background:#2a2a5a;border-radius:2px;vertical-align:middle"></span> Unoccupied</span>
+      </div>
+
+      <div class="section-title">Comfort Setpoints</div>
+      <div class="fg"><label>Occupied Lower (°C) <span id="occLoVal">21</span></label><input id="inOccLo" type="range" value="21" min="16" max="26" step="0.5" oninput="document.getElementById('occLoVal').textContent=this.value"></div>
+      <div class="fg"><label>Occupied Upper (°C) <span id="occHiVal">24</span></label><input id="inOccHi" type="range" value="24" min="20" max="30" step="0.5" oninput="document.getElementById('occHiVal').textContent=this.value"></div>
+      <div class="fg"><label>Unoccupied Lower (°C) <span id="unoccLoVal">15</span></label><input id="inUnoccLo" type="range" value="15" min="10" max="20" step="0.5" oninput="document.getElementById('unoccLoVal').textContent=this.value"></div>
+      <div class="fg"><label>Unoccupied Upper (°C) <span id="unoccHiVal">30</span></label><input id="inUnoccHi" type="range" value="30" min="25" max="40" step="0.5" oninput="document.getElementById('unoccHiVal').textContent=this.value"></div>
+
+      <div class="section-title">Cost Analysis</div>
+      <div class="fg"><label>Electricity Price ($/kWh) <span id="priceVal">0.12</span></label><input id="inPrice" type="range" value="0.12" min="0.01" max="0.50" step="0.01" oninput="document.getElementById('priceVal').textContent=this.value"></div>
+
+      <div class="section-title">Export</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        <button class="btn-export" onclick="doExport('rl','csv')">RL CSV</button>
+        <button class="btn-export" onclick="doExport('rl','json')">RL JSON</button>
+        <button class="btn-export" onclick="doExport('baseline','csv')">PI CSV</button>
+        <button class="btn-export" onclick="doExport('comparison','csv')">Compare CSV</button>
+        <button class="btn-export" onclick="doExport('training','csv')">Training CSV</button>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Results Comparison <span id="compTag" style="font-size:11px;color:#666">Run simulation to compare</span></div>
+        <div class="card-body">
+          <table class="ct" id="compTable">
+            <thead><tr><th>Metric</th><th>Baseline (PI)</th><th>RL Agent</th><th>Delta</th></tr></thead>
+            <tbody>
+              <tr><td>Comfort Score</td><td id="bComp">--</td><td id="rComp">--</td><td id="dComp">--</td></tr>
+              <tr><td>Energy (kWh/m&sup2;)</td><td id="bEn">--</td><td id="rEn">--</td><td id="dEn">--</td></tr>
+              <tr><td>Discomfort (K&middot;h)</td><td id="bDis">--</td><td id="rDis">--</td><td id="dDis">--</td></tr>
+              <tr><td>Total Reward</td><td id="bRw">--</td><td id="rRw">--</td><td id="dRw">--</td></tr>
+              <tr><td>Avg Fan Speed</td><td id="bFan">--</td><td id="rFan">--</td><td id="dFan">--</td></tr>
+              <tr><td>Energy Cost</td><td id="bCost">--</td><td id="rCost">--</td><td id="dCost">--</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px" id="sweepCard" hidden>
+        <div class="card-title">Sweep Results <span id="sweepStatus" style="font-size:11px;color:#666"></span></div>
+        <div class="card-body" id="sweepResults"><div class="empty-msg">No sweep results yet</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="agents-panel">
+    <div class="card">
+      <div class="card-title">Saved Agents <span id="agentCount" style="font-size:11px;color:#666">Loading...</span></div>
+      <div class="card-body" id="agentList"><div class="empty-msg">No saved agents yet</div></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="card">
+      <div class="card-title">Temperature Profile <span style="display:flex;gap:6px"><button class="toggle-btn active" onclick="toggleView('hourly',this)">Hourly</button><button class="toggle-btn" onclick="toggleView('daily',this)">Daily</button></span></div>
+      <div class="card-body"><div id="tempChart" style="height:320px"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">HVAC Power Consumption</div>
+      <div class="card-body"><div id="pwrChart" style="height:320px"></div></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="card">
+      <div class="card-title">Comfort Violations</div>
+      <div class="card-body"><div id="violChart" style="height:300px"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Action Analysis</div>
+      <div class="card-body"><div id="actionChart" style="height:300px"></div></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="card"><div class="card-title">Training Progress</div><div class="card-body"><div id="trainChart" style="height:300px"></div></div></div>
+    <div class="card"><div class="card-title">Episode Rewards</div><div class="card-body"><div id="epChart" style="height:300px"></div></div></div>
+  </div>
+</div>
+<script>
+let selectedAlgo="SAC",pollTimer=null,sweepTimer=null,blData=null,lastRL=null,lastBL=null,viewMode="hourly";
+let occHours=Array.from({length:24},(_,i)=>i>=8&&i<20);
+const P={paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#aaa',size:11},margin:{l:50,r:20,t:10,b:40},xaxis:{gridcolor:'#1a2a3a',zerolinecolor:'#1a2a3a'},yaxis:{gridcolor:'#1a2a3a',zerolinecolor:'#1a2a3a'},legend:{bgcolor:'transparent',font:{size:10}}};
+const COLORS={rl:'#00d4ff',bl:'#ff6b6b',rl2:'#00ff88',bl2:'#ffd93d',rl3:'#ff69b4',setpoint:'#ffd93d',comfort:'rgba(255,217,61,.05)'};
+
+function pickAlgo(el){document.querySelectorAll('.algo-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');selectedAlgo=el.dataset.algo;}
+
+function initOccGrid(){
+  const g=document.getElementById('occGrid');
+  g.innerHTML='';
+  for(let h=0;h<24;h++){
+    const c=document.createElement('div');
+    c.className='occ-cell '+(occHours[h]?'occupied':'unoccupied');
+    c.textContent=h;
+    c.onclick=()=>{occHours[h]=!occHours[h];c.className='occ-cell '+(occHours[h]?'occupied':'unoccupied');};
+    g.appendChild(c);
+  }
+}
+
+function getEnvCfg(){
+  const occ=[];
+  occHours.forEach((v,i)=>{if(v)occ.push(i);});
+  return{
+    occ_hours:occ,
+    occ_setpoint_lower:parseFloat(document.getElementById('inOccLo').value),
+    occ_setpoint_upper:parseFloat(document.getElementById('inOccHi').value),
+    unocc_setpoint_lower:parseFloat(document.getElementById('inUnoccLo').value),
+    unocc_setpoint_upper:parseFloat(document.getElementById('inUnoccHi').value)
+  };
+}
+
+function initCharts(){
+  const h=Array.from({length:48},(_,i)=>i);
+  Plotly.newPlot('tempChart',[{x:h,y:[],mode:'lines',name:'RL Room',line:{color:COLORS.rl,width:2}},{x:h,y:[],mode:'lines',name:'PI Room',line:{color:COLORS.bl,width:2,dash:'dot'}},{x:h,y:[],mode:'lines',name:'Outdoor',line:{color:'#888',width:1,dash:'dot'}},{x:h,y:[],mode:'lines',name:'Upper',line:{color:COLORS.setpoint,width:1,dash:'dash',opacity:.4}},{x:h,y:[],mode:'lines',name:'Lower',line:{color:COLORS.setpoint,width:1,dash:'dash',opacity:.4},fill:'tonexty',fillcolor:COLORS.comfort}],{...P,yaxis:{...P.yaxis,title:'°C'},xaxis:{...P.xaxis,title:'Hour'}},{responsive:true});
+  Plotly.newPlot('pwrChart',[{x:h,y:[],fill:'tozeroy',name:'RL Heat',line:{color:COLORS.rl},fillcolor:'rgba(0,212,255,.12)'},{x:h,y:[],fill:'tozeroy',name:'RL Cool',line:{color:'#0088cc'},fillcolor:'rgba(0,136,204,.12)'},{x:h,y:[],fill:'tozeroy',name:'PI Heat',line:{color:COLORS.bl,dash:'dot'},fillcolor:'rgba(255,107,107,.08)'},{x:h,y:[],fill:'tozeroy',name:'PI Cool',line:{color:'#cc4444',dash:'dot'},fillcolor:'rgba(204,68,68,.08)'}],{...P,yaxis:{...P.yaxis,title:'W'},xaxis:{...P.xaxis,title:'Hour'}},{responsive:true});
+  Plotly.newPlot('violChart',[{x:h,y:[],name:'RL',type:'bar',marker:{color:COLORS.rl,opacity:.7}},{x:h,y:[],name:'PI',type:'bar',marker:{color:COLORS.bl,opacity:.5}}],{...P,barmode:'group',yaxis:{...P.yaxis,title:'Discomfort (K)'},xaxis:{...P.xaxis,title:'Hour'}},{responsive:true});
+  Plotly.newPlot('actionChart',[{x:h,y:[],name:'RL Fan',line:{color:COLORS.rl,width:2}},{x:h,y:[],name:'PI Fan',line:{color:COLORS.bl,width:2,dash:'dot'}},{x:h,y:[],name:'RL Tsup',line:{color:COLORS.rl2,width:2},yaxis:'y2'},{x:h,y:[],name:'PI Tsup',line:{color:COLORS.bl2,width:2,dash:'dot'},yaxis:'y2'}],{...P,yaxis:{...P.yaxis,title:'Fan Speed',range:[0,1]},yaxis2:{...P.yaxis,title:'Supply Temp (°C)',overlaying:'y',side:'right',gridcolor:'transparent'},xaxis:{...P.xaxis,title:'Hour'}},{responsive:true});
+  Plotly.newPlot('trainChart',[{y:[],mode:'lines',name:'Avg Reward',line:{color:'#00ff88',width:2}}],{...P,yaxis:{...P.yaxis,title:'Reward'}},{responsive:true});
+  Plotly.newPlot('epChart',[{y:[],mode:'markers',name:'Episode',marker:{color:'#00d4ff',size:3,opacity:.6}}],{...P,yaxis:{...P.yaxis,title:'Reward'}},{responsive:true});
+}
+
+function dailyAggregate(traj){
+  if(!traj.length)return[];
+  const days=Math.ceil(traj.length/24);
+  const result=[];
+  for(let d=0;d<days;d++){
+    const s=traj.slice(d*24,(d+1)*24);
+    if(!s.length)continue;
+    result.push({
+      zone_temperature_c:s.reduce((a,t)=>a+t.zone_temperature_c,0)/s.length,
+      outdoor_temp:s.reduce((a,t)=>a+(t.outdoor_temp||0),0)/s.length,
+      upper_setpoint_c:s[0].upper_setpoint_c,lower_setpoint_c:s[0].lower_setpoint_c,
+      power_heat_w:s.reduce((a,t)=>a+t.power_heat_w,0)/s.length,
+      power_cool_w:s.reduce((a,t)=>a+t.power_cool_w,0)/s.length,
+      discomfort_proxy:s.reduce((a,t)=>a+t.discomfort_proxy,0),
+      action_fan:s.reduce((a,t)=>a+(t.action_fan||0),0)/s.length,
+      action_tsup:s.reduce((a,t)=>a+(t.action_tsup||0),0)/s.length,
+      reward:s.reduce((a,t)=>a+t.reward,0)
+    });
+  }
+  return result;
+}
+
+function showTemp(rlTraj,blTraj){
+  let rl=rlTraj,bl=blTraj||[];
+  if(viewMode==='daily'){rl=dailyAggregate(rl);bl=dailyAggregate(bl);}
+  const h=rl.map((_,i)=>i),bh=bl.map((_,i)=>i);
+  Plotly.react('tempChart',[
+    {x:h,y:rl.map(t=>t.zone_temperature_c),mode:'lines',name:'RL Room',line:{color:COLORS.rl,width:2}},
+    {x:bh,y:bl.map(t=>t.zone_temperature_c),mode:'lines',name:'PI Room',line:{color:COLORS.bl,width:2,dash:'dot'}},
+    {x:h,y:rl.map(t=>t.outdoor_temp||0),mode:'lines',name:'Outdoor',line:{color:'#888',width:1,dash:'dot'}},
+    {x:h,y:rl.map(t=>t.upper_setpoint_c),mode:'lines',name:'Upper',line:{color:COLORS.setpoint,width:1,dash:'dash',opacity:.4}},
+    {x:h,y:rl.map(t=>t.lower_setpoint_c),mode:'lines',name:'Lower',line:{color:COLORS.setpoint,width:1,dash:'dash',opacity:.4},fill:'tonexty',fillcolor:COLORS.comfort}
+  ],{...P,yaxis:{...P.yaxis,title:'°C'},xaxis:{...P.xaxis,title:viewMode==='daily'?'Day':'Hour'}});
+}
+
+function showPower(rlTraj,blTraj){
+  let rl=rlTraj,bl=blTraj||[];
+  if(viewMode==='daily'){rl=dailyAggregate(rl);bl=dailyAggregate(bl);}
+  const h=rl.map((_,i)=>i),bh=bl.map((_,i)=>i);
+  Plotly.react('pwrChart',[
+    {x:h,y:rl.map(t=>t.power_heat_w),fill:'tozeroy',name:'RL Heat',line:{color:COLORS.rl},fillcolor:'rgba(0,212,255,.12)'},
+    {x:h,y:rl.map(t=>-t.power_cool_w),fill:'tozeroy',name:'RL Cool',line:{color:'#0088cc'},fillcolor:'rgba(0,136,204,.12)'},
+    {x:bh,y:bl.map(t=>t.power_heat_w),fill:'tozeroy',name:'PI Heat',line:{color:COLORS.bl,dash:'dot'},fillcolor:'rgba(255,107,107,.08)'},
+    {x:bh,y:bl.map(t=>-t.power_cool_w),fill:'tozeroy',name:'PI Cool',line:{color:'#cc4444',dash:'dot'},fillcolor:'rgba(204,68,68,.08)'}
+  ],{...P,yaxis:{...P.yaxis,title:'W'},xaxis:{...P.xaxis,title:viewMode==='daily'?'Day':'Hour'}});
+}
+
+function showViolations(rlTraj,blTraj){
+  let rl=rlTraj,bl=blTraj||[];
+  if(viewMode==='daily'){rl=dailyAggregate(rl);bl=dailyAggregate(bl);}
+  const h=rl.map((_,i)=>i),bh=bl.map((_,i)=>i);
+  Plotly.react('violChart',[
+    {x:h,y:rl.map(t=>t.discomfort_proxy),name:'RL',type:'bar',marker:{color:COLORS.rl,opacity:.7}},
+    {x:bh,y:bl.map(t=>t.discomfort_proxy),name:'PI',type:'bar',marker:{color:COLORS.bl,opacity:.5}}
+  ],{...P,barmode:'group',yaxis:{...P.yaxis,title:'Discomfort (K·h)'},xaxis:{...P.xaxis,title:viewMode==='daily'?'Day':'Hour'}});
+}
+
+function showActions(rlTraj,blTraj){
+  let rl=rlTraj,bl=blTraj||[];
+  if(viewMode==='daily'){rl=dailyAggregate(rl);bl=dailyAggregate(bl);}
+  const h=rl.map((_,i)=>i),bh=bl.map((_,i)=>i);
+  Plotly.react('actionChart',[
+    {x:h,y:rl.map(t=>t.action_fan||0),name:'RL Fan',line:{color:COLORS.rl,width:2}},
+    {x:bh,y:bl.map(t=>t.action_fan||0),name:'PI Fan',line:{color:COLORS.bl,width:2,dash:'dot'}},
+    {x:h,y:rl.map(t=>t.action_tsup||0),name:'RL Tsup',line:{color:COLORS.rl2,width:2},yaxis:'y2'},
+    {x:bh,y:bl.map(t=>t.action_tsup||0),name:'PI Tsup',line:{color:COLORS.bl2,width:2,dash:'dot'},yaxis:'y2'}
+  ],{...P,yaxis:{...P.yaxis,title:'Fan Speed',range:[0,1.05]},yaxis2:{...P.yaxis,title:'Supply Temp (°C)',overlaying:'y',side:'right',gridcolor:'transparent'},xaxis:{...P.xaxis,title:viewMode==='daily'?'Day':'Hour'}});
+}
+
+function showTraining(rewards){
+  if(!rewards||!rewards.length)return;
+  const avg=(arr,w)=>arr.map((_,i)=>{const s=Math.max(0,i-w+1);const sl=arr.slice(s,i+1);return sl.reduce((a,b)=>a+b,0)/sl.length;});
+  Plotly.react('trainChart',[{y:avg(rewards,Math.min(50,rewards.length)),mode:'lines',name:'Avg Reward',line:{color:'#00ff88',width:2}}],{...P,yaxis:{...P.yaxis,title:'Reward'}});
+  Plotly.react('epChart',[{y:rewards,mode:'markers',name:'Episode',marker:{color:'#00d4ff',size:Math.max(2,Math.min(6,5000/Math.max(1,rewards.length))),opacity:.6}}],{...P,yaxis:{...P.yaxis,title:'Reward'}});
+}
+
+function showMetrics(m){
+  document.getElementById('mComfort').textContent=m.comfort_score.toFixed(1);
+  document.getElementById('mEnergy').textContent=m.total_energy.toFixed(3);
+  document.getElementById('mReward').textContent=m.total_reward.toFixed(0);
+  const price=parseFloat(document.getElementById('inPrice').value);
+  document.getElementById('mCost').textContent='$'+(m.total_energy*price).toFixed(2);
+  document.getElementById('mDayCost').textContent='$'+(m.energy_cost_per_day*price).toFixed(2);
+}
+
+function avgAction(traj,key){if(!traj||!traj.length)return 0;return traj.reduce((s,t)=>s+(t[key]||0),0)/traj.length;}
+
+function showComparison(rl,bl){
+  const f=v=>v.toFixed(2),d=(r,b)=>{const v=r-b;return(v>0?'+':'')+v.toFixed(2)},dc=(r,b)=>{const v=r-b;return(v>0?'+':'')+v.toFixed(1)+'%'};
+  document.getElementById('bComp').textContent=f(bl.comfort_score)+'%';
+  document.getElementById('rComp').textContent=f(rl.comfort_score)+'%';
+  document.getElementById('dComp').innerHTML='<span class="'+(rl.comfort_score>bl.comfort_score?'good':'bad')+'">'+dc(rl.comfort_score,bl.comfort_score)+'</span>';
+  document.getElementById('bEn').textContent=f(bl.total_energy);
+  document.getElementById('rEn').textContent=f(rl.total_energy);
+  document.getElementById('dEn').innerHTML='<span class="'+(rl.total_energy<bl.total_energy?'good':'bad')+'">'+d(rl.total_energy,bl.total_energy)+'</span>';
+  document.getElementById('bDis').textContent=f(bl.total_discomfort);
+  document.getElementById('rDis').textContent=f(rl.total_discomfort);
+  document.getElementById('dDis').innerHTML='<span class="'+(rl.total_discomfort<bl.total_discomfort?'good':'bad')+'">'+d(rl.total_discomfort,bl.total_discomfort)+'</span>';
+  document.getElementById('bRw').textContent=f(bl.total_reward);
+  document.getElementById('rRw').textContent=f(rl.total_reward);
+  document.getElementById('dRw').innerHTML='<span class="'+(rl.total_reward>bl.total_reward?'good':'bad')+'">'+d(rl.total_reward,bl.total_reward)+'</span>';
+  const price=parseFloat(document.getElementById('inPrice').value);
+  const bCost=(bl.total_energy*price).toFixed(2),rCost=(rl.total_energy*price).toFixed(2);
+  document.getElementById('bCost').textContent='$'+bCost;
+  document.getElementById('rCost').textContent='$'+rCost;
+  document.getElementById('dCost').innerHTML='<span class="'+(rl.total_energy<bl.total_energy?'good':'bad')+'">$'+((rl.total_energy-bl.total_energy)*price).toFixed(3)+'</span>';
+  document.getElementById('compTag').textContent='';
+}
+
+function showComparisonExtended(rlTraj,blTraj){
+  const rfan=avgAction(rlTraj,'action_fan'),bfan=avgAction(blTraj,'action_fan');
+  document.getElementById('bFan').textContent=bfan.toFixed(3);
+  document.getElementById('rFan').textContent=rfan.toFixed(3);
+  document.getElementById('dFan').innerHTML='<span class="'+(Math.abs(rfan-bfan)<0.05?'neutral':'good')+'">'+((rfan-bfan)>0?'+':'')+(rfan-bfan).toFixed(3)+'</span>';
+}
+
+function renderAll(rlTraj,blTraj,rlMetrics,blMetrics){
+  lastRL=rlTraj;lastBL=blTraj;
+  showTemp(rlTraj,blTraj);showPower(rlTraj,blTraj);showViolations(rlTraj,blTraj);showActions(rlTraj,blTraj);
+  showMetrics(rlMetrics);showComparison(rlMetrics,blMetrics);showComparisonExtended(rlTraj,blTraj);
+}
+
+function toggleView(mode,btn){
+  viewMode=mode;
+  document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(lastRL&&lastBL){showTemp(lastRL,lastBL);showPower(lastRL,lastBL);showViolations(lastRL,lastBL);showActions(lastRL,lastBL);}
+}
+
+async function doExport(kind,fmt){
+  try{
+    const r=await fetch('/api/export/'+kind+'?format='+fmt);
+    if(!r.ok){const e=await r.json();alert(e.error||'Export failed');return;}
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='hvac_'+kind+'.'+fmt;a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){alert('Export failed: '+e.message);}
+}
+
+async function loadBaseline(){
+  try{const r=await fetch('/api/baseline');blData=await r.json();}catch(e){}
+}
+
+async function startTrain(continueFrom){
+  const btn=document.getElementById('btnTrain');
+  btn.disabled=true;document.getElementById('btnSim').disabled=true;document.getElementById('btnCompare').disabled=true;
+  document.getElementById('prog').style.display='block';document.getElementById('progText').style.display='block';
+  const sm=document.getElementById('statusMsg');
+  sm.className='status-msg show training';sm.textContent=continueFrom?'Continuing from '+continueFrom+'...':'Training started...';
+  document.getElementById('badge').className='badge training';document.getElementById('badge').textContent='Training';
+  const body={algo:selectedAlgo,timesteps:parseInt(document.getElementById('inTimesteps').value),
+    energy_weight:parseFloat(document.getElementById('inEW').value),lr:parseFloat(document.getElementById('inLR').value)};
+  if(continueFrom)body.continue_from=continueFrom;
+  await fetch('/api/train',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  pollTimer=setInterval(pollStatus,1000);
+}
+
+async function pollStatus(){
+  try{
+    const r=await fetch('/api/status');const s=await r.json();
+    document.getElementById('mEps').textContent=s.n_episodes;
+    document.getElementById('progText').textContent=s.current.toLocaleString()+' / '+s.total.toLocaleString()+' timesteps';
+    if(s.total>0)document.getElementById('progBar').style.width=(100*s.current/s.total)+'%';
+    if(s.status==='done'){
+      clearInterval(pollTimer);pollTimer=null;
+      document.getElementById('btnTrain').disabled=false;document.getElementById('btnSim').disabled=false;document.getElementById('btnCompare').disabled=false;
+      document.getElementById('prog').style.display='none';document.getElementById('progText').style.display='none';
+      const sm=document.getElementById('statusMsg');sm.className='status-msg show done';sm.textContent='Training complete!'+(s.last_saved?' Saved: '+s.last_saved:'');
+      document.getElementById('badge').className='badge done';document.getElementById('badge').textContent='Ready';
+      const rr=await fetch('/api/results');const rd=await rr.json();
+      if(rd.has_results)showTraining(rd.episode_rewards);loadAgents();
+    }
+    if(s.status==='error'){
+      clearInterval(pollTimer);pollTimer=null;
+      document.getElementById('btnTrain').disabled=false;document.getElementById('btnSim').disabled=false;document.getElementById('btnCompare').disabled=false;
+      document.getElementById('prog').style.display='none';
+      const sm=document.getElementById('statusMsg');sm.className='status-msg show error';sm.textContent='Error: '+s.error;
+      document.getElementById('badge').className='badge error';document.getElementById('badge').textContent='Error';
+    }
+  }catch(e){}
+}
+
+async function simulate(){
+  const btn=document.getElementById('btnSim');btn.disabled=true;
+  const sm=document.getElementById('statusMsg');sm.className='status-msg show training';sm.textContent='Simulating 14 days...';
+  try{
+    const cfg={energy_weight:parseFloat(document.getElementById('inEW').value),steps:336,...getEnvCfg()};
+    const r=await fetch('/api/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
+    const d=await r.json();
+    if(d.error){sm.className='status-msg show error';sm.textContent=d.error;btn.disabled=false;return;}
+    renderAll(d.rl.trajectory,d.baseline.trajectory,d.rl.metrics,d.baseline.metrics);
+    sm.className='status-msg show done';sm.textContent='Simulation complete!';btn.disabled=false;loadAgents();
+  }catch(e){sm.className='status-msg show error';sm.textContent='Failed';btn.disabled=false;}
+}
+
+async function loadAgents(){
+  try{
+    const r=await fetch('/api/agents');const agents=await r.json();
+    const el=document.getElementById('agentList'),ct=document.getElementById('agentCount');
+    ct.textContent=agents.length+' agent'+(agents.length!==1?'s':'');
+    if(!agents.length){el.innerHTML='<div class="empty-msg">No saved agents yet</div>';return;}
+    el.innerHTML=agents.slice().reverse().map(a=>{
+      const m=a.metrics||{},ar=m.avg_reward!=null?m.avg_reward.toFixed(1):'--';
+      const ac=m.avg_comfort!=null?(m.avg_comfort*100).toFixed(1)+'%':'--';
+      const ae=m.avg_energy!=null?m.avg_energy.toFixed(3):'--';
+      const date=a.saved_at?a.saved_at.replace('T',' ').substring(0,16):'';
+      return '<div class="agent-row"><div><input type="checkbox" class="agent-cb" data-name="'+a.name+'" onchange="updateCompareBtn()"><span class="agent-name" style="margin-left:6px">'+a.name+'</span><div class="agent-meta">'+a.algo+' · '+date+'</div><div class="agent-stats"><span>Reward: <b>'+ar+'</b></span><span>Comfort: <b class="good">'+ac+'</b></span><span>Energy: <b>'+ae+'</b></span></div></div><div class="agent-actions"><button class="btn-cont" onclick="continueAgent(\''+a.name+'\',\''+a.algo+'\')">Continue</button><button class="btn-sim" onclick="simSaved(\''+a.name+'\')">Simulate</button><button class="btn-del" onclick="delAgent(\''+a.name+'\')">X</button></div></div>';
+    }).join('');
+  }catch(e){}
+}
+
+function updateCompareBtn(){document.getElementById('btnCompare').disabled=document.querySelectorAll('.agent-cb:checked').length<2;}
+
+async function simSaved(name){
+  const sm=document.getElementById('statusMsg');sm.className='status-msg show training';sm.textContent='Simulating: '+name+'...';
+  try{
+    const cfg={name:name,energy_weight:parseFloat(document.getElementById('inEW').value),steps:336,...getEnvCfg()};
+    const r=await fetch('/api/simulate-saved',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
+    const d=await r.json();
+    if(d.error){sm.className='status-msg show error';sm.textContent=d.error;return;}
+    renderAll(d.rl.trajectory,d.baseline.trajectory,d.rl.metrics,d.baseline.metrics);
+    sm.className='status-msg show done';sm.textContent='Loaded: '+name;
+  }catch(e){sm.className='status-msg show error';sm.textContent='Failed';}
+}
+
+function continueAgent(name,algo){
+  const ts=prompt('Continue "'+name+'" ('+algo+'). Additional timesteps?',String(parseInt(document.getElementById('inTimesteps').value)));
+  if(ts===null)return;const n=parseInt(ts);if(isNaN(n)||n<1000){alert('Enter >= 1000');return;}
+  document.getElementById('inTimesteps').value=n;startTrain(name);
+}
+
+async function compareSelected(){
+  const checked=[...document.querySelectorAll('.agent-cb:checked')].map(cb=>cb.dataset.name);
+  if(checked.length<2)return;
+  const sm=document.getElementById('statusMsg');sm.className='status-msg show training';sm.textContent='Comparing '+checked.length+' agents...';
+  try{
+    const cfg={names:checked,energy_weight:parseFloat(document.getElementById('inEW').value),steps:336,...getEnvCfg()};
+    const r=await fetch('/api/agents/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
+    const d=await r.json();
+    if(d.error||!d.agents||!d.agents.length){sm.className='status-msg show error';sm.textContent=d.error||'No agents';return;}
+    const cols=[COLORS.rl,COLORS.rl2,COLORS.rl3,'#ffa500','#9370db'];
+    const bh=d.baseline.trajectory.map((_,i)=>i);
+    let traces=[{x:bh,y:d.baseline.trajectory.map(t=>t.zone_temperature_c),mode:'lines',name:'PI',line:{color:COLORS.bl,width:2,dash:'dot'}}];
+    d.agents.forEach((ag,i)=>{const ah=ag.trajectory.map((_,j)=>j);traces.push({x:ah,y:ag.trajectory.map(t=>t.zone_temperature_c),mode:'lines',name:ag.name,line:{color:cols[i%cols.length],width:2}});});
+    Plotly.react('tempChart',traces,{...P,yaxis:{...P.yaxis,title:'°C'},xaxis:{...P.xaxis,title:'Hour'}});
+    let tableHTML='<thead><tr><th>Metric</th><th>PI</th>';d.agents.forEach(ag=>{tableHTML+='<th>'+ag.name+'</th>';});tableHTML+='</tr></thead><tbody>';
+    [{l:'Comfort %',k:'comfort_score',f:v=>v.toFixed(1)+'%',b:'h'},{l:'Energy',k:'total_energy',f:v=>v.toFixed(3),b:'l'},{l:'Discomfort',k:'total_discomfort',f:v=>v.toFixed(2),b:'l'},{l:'Reward',k:'total_reward',f:v=>v.toFixed(0),b:'h'}].forEach(mk=>{
+      const bv=d.baseline.metrics[mk.k];tableHTML+='<tr><td>'+mk.l+'</td><td>'+mk.f(bv)+'</td>';
+      d.agents.forEach(ag=>{const rv=ag.metrics[mk.k];tableHTML+='<td><span class="'+((mk.b==='h'?rv>bv:rv<bv)?'good':'bad')+'">'+mk.f(rv)+'</span></td>';});tableHTML+='</tr>';
+    });
+    tableHTML+='</tbody>';document.querySelector('#compTable').innerHTML=tableHTML;
+    sm.className='status-msg show done';sm.textContent='Compared: '+d.agents.map(a=>a.name).join(' vs ');
+  }catch(e){sm.className='status-msg show error';sm.textContent='Failed';}
+}
+
+async function delAgent(name){if(!confirm('Delete '+name+'?'))return;try{await fetch('/api/agents/'+name+'/delete',{method:'POST'});loadAgents();}catch(e){}}
+
+async function startSweep(){
+  const btn=document.getElementById('btnSweep');btn.disabled=true;
+  const sm=document.getElementById('statusMsg');sm.className='status-msg show training';sm.textContent='Starting sweep...';
+  document.getElementById('badge').className='badge training';document.getElementById('badge').textContent='Sweeping';
+  try{
+    const body={algo:selectedAlgo,timesteps:parseInt(document.getElementById('inTimesteps').value),
+      energy_weight:parseFloat(document.getElementById('inEW').value),
+      learning_rates:[0.0001,0.0003,0.001],gammas:[0.95,0.99]};
+    const r=await fetch('/api/sweep',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.error){sm.className='status-msg show error';sm.textContent=d.error;btn.disabled=false;return;}
+    sm.className='status-msg show training';sm.textContent='Sweeping '+d.total+' configs...';
+    sweepTimer=setInterval(pollSweep,2000);
+  }catch(e){sm.className='status-msg show error';sm.textContent='Failed';btn.disabled=false;}
+}
+
+async function pollSweep(){
+  try{
+    const r=await fetch('/api/sweep-status');const s=await r.json();
+    document.getElementById('sweepCard').hidden=false;
+    document.getElementById('sweepStatus').textContent=s.completed+'/'+s.total+(s.running?' running':' done');
+    if(s.results&&s.results.length){
+      let html='';s.results.forEach(r=>{
+        html+='<div class="sweep-result"><div style="font-weight:600;margin-bottom:4px">'+r.name+'</div>';
+        html+='<div class="sweep-row"><span>LR</span><span>'+r.lr+'</span></div>';
+        html+='<div class="sweep-row"><span>Gamma</span><span>'+r.gamma+'</span></div>';
+        html+='<div class="sweep-row"><span>Avg Reward</span><span class="'+(r.metrics.avg_reward>-200?'good':'bad')+'">'+r.metrics.avg_reward.toFixed(1)+'</span></div>';
+        html+='<div class="sweep-row"><span>Avg Comfort</span><span>'+(r.metrics.avg_comfort*100).toFixed(1)+'%</span></div>';
+        html+='</div>';
+      });
+      document.getElementById('sweepResults').innerHTML=html;
+    }
+    if(!s.running){
+      clearInterval(sweepTimer);sweepTimer=null;
+      document.getElementById('btnSweep').disabled=false;
+      const sm=document.getElementById('statusMsg');sm.className='status-msg show done';sm.textContent='Sweep complete!';
+      document.getElementById('badge').className='badge done';document.getElementById('badge').textContent='Ready';
+      loadAgents();
+    }
+  }catch(e){}
+}
+
+document.addEventListener('DOMContentLoaded',()=>{initCharts();initOccGrid();loadBaseline();loadAgents();setInterval(loadAgents,15000);});
+</script>
+</body>
+</html>
