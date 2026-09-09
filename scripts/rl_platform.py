@@ -91,7 +91,7 @@ class ThermalModel:
     def __init__(self):
         self.C, self.R, self.alpha, self.A, self.K_u = 2.0, 5.0, 0.15, 48.0, 0.3
 
-    def step(self, Tin, Tout, G, fan, Tsup, dt=1.0):
+    def step(self, Tin, Tout, G, fan, Tsup, dt=5.0/60.0):
         Qw = (Tout - Tin) / self.R
         Qs = self.alpha * G * self.A / 1000.0
         Qh = fan * self.K_u * (Tsup - Tin)
@@ -105,7 +105,7 @@ class ThermalModel:
 class SimpleHVACEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, weather, energy_weight=0.6, episode_steps=24,
+    def __init__(self, weather, energy_weight=0.6, episode_steps=288,
                  comfort_deadband=None, setpoint_lower=None, setpoint_upper=None,
                  occ_hours=None, occ_setpoint_lower=None, occ_setpoint_upper=None,
                  unocc_setpoint_lower=None, unocc_setpoint_upper=None):
@@ -114,8 +114,8 @@ class SimpleHVACEnv(gym.Env):
         self.weather = weather
         self.ew = energy_weight
         self.ep = episode_steps
-        self.dref = 6.8247 / 336
-        self.eref = 4.2263 / 336
+        self.dref = 6.8247 / 4032
+        self.eref = 4.2263 / 4032
         self.fa = 48.0
         self.action_space = spaces.Box(-1, 1, (2,), np.float32)
         self.observation_space = spaces.Box(
@@ -240,11 +240,19 @@ def load_weather():
     csv_path = Path(__file__).parent.parent / "data" / "baseline_14d" / "trajectory.csv"
     if csv_path.exists():
         df = pd.read_csv(csv_path)
-        return np.column_stack([df["zon_weaSta_reaWeaTDryBul_y"].values - 273.15,
-                                df["zon_weaSta_reaWeaHGloHor_y"].values])
-    h = np.arange(336)
-    Tout = 15 + 5 * np.sin(2*np.pi*h/24 - np.pi/2) + 3*np.sin(2*np.pi*h/336)
-    G = np.maximum(0, 600*np.sin(2*np.pi*h/24 - np.pi/3))
+        Tout = df["zon_weaSta_reaWeaTDryBul_y"].values - 273.15
+        G = df["zon_weaSta_reaWeaHGloHor_y"].values
+        n_hours = len(Tout)
+        n_5min = n_hours * 12
+        x_hour = np.arange(n_hours)
+        x_5min = np.linspace(0, n_hours - 1, n_5min)
+        Tout_5min = np.interp(x_5min, x_hour, Tout)
+        G_5min = np.interp(x_5min, x_hour, G)
+        G_5min = np.maximum(0, G_5min)
+        return np.column_stack([Tout_5min, G_5min])
+    h = np.arange(4032)
+    Tout = 15 + 5 * np.sin(2*np.pi*h/288 - np.pi/2) + 3*np.sin(2*np.pi*h/4032)
+    G = np.maximum(0, 600*np.sin(2*np.pi*h/288 - np.pi/3))
     return np.column_stack([Tout, G])
 
 
@@ -263,7 +271,7 @@ def _env_kwargs(cfg):
     return kw
 
 
-def run_episode(model, weather, ep_steps=336, ew=0.6, env_cfg=None):
+def run_episode(model, weather, ep_steps=4032, ew=0.6, env_cfg=None):
     kw = _env_kwargs(env_cfg or {})
     env = SimpleHVACEnv(weather, ew, ep_steps, **kw)
     obs, _ = env.reset()
@@ -281,7 +289,7 @@ def run_episode(model, weather, ep_steps=336, ew=0.6, env_cfg=None):
     return traj
 
 
-def run_baseline(weather, ep_steps=336, ew=0.6, env_cfg=None):
+def run_baseline(weather, ep_steps=4032, ew=0.6, env_cfg=None):
     kw = _env_kwargs(env_cfg or {})
     env = SimpleHVACEnv(weather, ew, ep_steps, **kw)
     obs, _ = env.reset()
@@ -552,7 +560,7 @@ class Handler(BaseHTTPRequestHandler):
         if model is None:
             return self._json({"error": "No model trained yet"})
         ew = float(cfg.get("energy_weight", 0.6))
-        n = int(cfg.get("steps", 336))
+        n = int(cfg.get("steps", 4032))
         env_cfg = _env_kwargs(cfg)
         rl_traj = run_episode(model, self.weather, n, ew, env_cfg)
         rl_m = sim_metrics(rl_traj)
@@ -572,7 +580,7 @@ class Handler(BaseHTTPRequestHandler):
         if model is None:
             return self._json({"error": f"Agent '{name}' not found"})
         ew = float(cfg.get("energy_weight", 0.6))
-        n = int(cfg.get("steps", 336))
+        n = int(cfg.get("steps", 4032))
         env_cfg = _env_kwargs(cfg)
         rl_traj = run_episode(model, self.weather, n, ew, env_cfg)
         rl_m = sim_metrics(rl_traj)
@@ -587,7 +595,7 @@ class Handler(BaseHTTPRequestHandler):
     def _compare_agents(self, cfg):
         names = cfg.get("names", [])
         ew = float(cfg.get("energy_weight", 0.6))
-        n = int(cfg.get("steps", 336))
+        n = int(cfg.get("steps", 4032))
         env_cfg = _env_kwargs(cfg)
         if not names:
             return self._json({"error": "No agent names provided"})
@@ -665,9 +673,9 @@ def main():
     print("  HVAC RL Control Platform")
     print("=" * 50)
     weather = load_weather()
-    print(f"Loaded {len(weather)} hours of weather data")
+    print(f"Loaded {len(weather)} rows of weather data (5-min intervals)")
     st = State()
-    bl = run_baseline(weather, 336, 0.6)
+    bl = run_baseline(weather, 4032, 0.6)
     bl_m = sim_metrics(bl)
     bl_hours = list(range(len(bl)))
     bl_data = dict(trajectory=bl, metrics=bl_m, hours=bl_hours)
