@@ -88,8 +88,8 @@ def delete_agent(name):
 
 
 class ThermalModel:
-    def __init__(self):
-        self.C, self.R, self.alpha, self.A, self.K_u = 2.0, 5.0, 0.15, 48.0, 0.3
+    def __init__(self, C=2.0, R=5.0, alpha=0.15, A=48.0, K_u=0.3):
+        self.C, self.R, self.alpha, self.A, self.K_u = C, R, alpha, A, K_u
 
     def step(self, Tin, Tout, G, fan, Tsup, dt=5.0/60.0):
         Qw = (Tout - Tin) / self.R
@@ -105,18 +105,23 @@ class ThermalModel:
 class SimpleHVACEnv(gym.Env):
     metadata = {"render_modes": []}
 
-    def __init__(self, weather, energy_weight=0.6, episode_steps=288,
-                 comfort_deadband=None, setpoint_lower=None, setpoint_upper=None,
+    def __init__(self, weather, energy_weight=0.6, episode_steps=None,
+                 timestep_min=5, comfort_deadband=None, setpoint_lower=None, setpoint_upper=None,
                  occ_hours=None, occ_setpoint_lower=None, occ_setpoint_upper=None,
-                 unocc_setpoint_lower=None, unocc_setpoint_upper=None):
+                 unocc_setpoint_lower=None, unocc_setpoint_upper=None,
+                 building_C=2.0, building_R=5.0, building_alpha=0.15, building_A=48.0, building_K_u=0.3):
         super().__init__()
-        self.thermal = ThermalModel()
+        self.timestep_min = timestep_min
+        self.dt = timestep_min / 60.0
+        self.thermal = ThermalModel(building_C, building_R, building_alpha, building_A, building_K_u)
         self.weather = weather
         self.ew = energy_weight
-        self.ep = episode_steps
-        self.dref = 6.8247 / 4032
-        self.eref = 4.2263 / 4032
-        self.fa = 48.0
+        steps_per_hour = 60 / timestep_min
+        self.ep = episode_steps if episode_steps else int(14 * 24 * steps_per_hour)
+        total_steps = len(weather)
+        self.dref = 6.8247 / total_steps
+        self.eref = 4.2263 / total_steps
+        self.fa = building_A
         self.action_space = spaces.Box(-1, 1, (2,), np.float32)
         self.observation_space = spaces.Box(
             np.array([-20, -50, 0, 0, 0, 0, -1, -1], np.float32),
@@ -156,7 +161,7 @@ class SimpleHVACEnv(gym.Env):
         fan = (a[0] + 1) / 2
         Tsup = 12 + (a[1] + 1) / 2 * 28
         To, G = self._w(self.step_n)
-        self.Tin, Ph, Pc, Pf = self.thermal.step(self.Tin, To, G, fan, Tsup)
+        self.Tin, Ph, Pc, Pf = self.thermal.step(self.Tin, To, G, fan, Tsup, self.dt)
         lo, hi, _ = self._sch(self.step_n)
         dis = max(lo - self.Tin, 0) + max(self.Tin - hi, 0)
         dn = dis / self.dref
@@ -236,23 +241,26 @@ class CB(BaseCallback):
         return True
 
 
-def load_weather():
+def load_weather(timestep_min=5):
     csv_path = Path(__file__).parent.parent / "data" / "baseline_14d" / "trajectory.csv"
     if csv_path.exists():
         df = pd.read_csv(csv_path)
         Tout = df["zon_weaSta_reaWeaTDryBul_y"].values - 273.15
         G = df["zon_weaSta_reaWeaHGloHor_y"].values
         n_hours = len(Tout)
-        n_5min = n_hours * 12
+        steps_per_hour = 60 / timestep_min
+        n_steps = int(n_hours * steps_per_hour)
         x_hour = np.arange(n_hours)
-        x_5min = np.linspace(0, n_hours - 1, n_5min)
-        Tout_5min = np.interp(x_5min, x_hour, Tout)
-        G_5min = np.interp(x_5min, x_hour, G)
-        G_5min = np.maximum(0, G_5min)
-        return np.column_stack([Tout_5min, G_5min])
-    h = np.arange(4032)
-    Tout = 15 + 5 * np.sin(2*np.pi*h/288 - np.pi/2) + 3*np.sin(2*np.pi*h/4032)
-    G = np.maximum(0, 600*np.sin(2*np.pi*h/288 - np.pi/3))
+        x_new = np.linspace(0, n_hours - 1, n_steps)
+        Tout_new = np.interp(x_new, x_hour, Tout)
+        G_new = np.interp(x_new, x_hour, G)
+        G_new = np.maximum(0, G_new)
+        return np.column_stack([Tout_new, G_new])
+    steps_per_hour = 60 / timestep_min
+    n_steps = int(14 * 24 * steps_per_hour)
+    h = np.arange(n_steps)
+    Tout = 15 + 5 * np.sin(2*np.pi*h/(24*steps_per_hour) - np.pi/2) + 3*np.sin(2*np.pi*h/n_steps)
+    G = np.maximum(0, 600*np.sin(2*np.pi*h/(24*steps_per_hour) - np.pi/3))
     return np.column_stack([Tout, G])
 
 
@@ -268,15 +276,25 @@ def _env_kwargs(cfg):
         kw["unocc_setpoint_lower"] = float(cfg["unocc_setpoint_lower"])
     if cfg.get("unocc_setpoint_upper") is not None:
         kw["unocc_setpoint_upper"] = float(cfg["unocc_setpoint_upper"])
+    if cfg.get("building_C") is not None:
+        kw["building_C"] = float(cfg["building_C"])
+    if cfg.get("building_R") is not None:
+        kw["building_R"] = float(cfg["building_R"])
+    if cfg.get("building_alpha") is not None:
+        kw["building_alpha"] = float(cfg["building_alpha"])
+    if cfg.get("building_A") is not None:
+        kw["building_A"] = float(cfg["building_A"])
+    if cfg.get("building_K_u") is not None:
+        kw["building_K_u"] = float(cfg["building_K_u"])
     return kw
 
 
-def run_episode(model, weather, ep_steps=4032, ew=0.6, env_cfg=None):
+def run_episode(model, weather, ep_steps=None, ew=0.6, env_cfg=None, timestep_min=5):
     kw = _env_kwargs(env_cfg or {})
-    env = SimpleHVACEnv(weather, ew, ep_steps, **kw)
+    env = SimpleHVACEnv(weather, ew, ep_steps, timestep_min=timestep_min, **kw)
     obs, _ = env.reset()
     traj = []
-    for _ in range(ep_steps):
+    for _ in range(env.ep):
         action, _ = model.predict(obs, deterministic=True)
         obs, r, _, done, info = env.step(action)
         info["reward"] = float(r)
@@ -289,16 +307,16 @@ def run_episode(model, weather, ep_steps=4032, ew=0.6, env_cfg=None):
     return traj
 
 
-def run_baseline(weather, ep_steps=4032, ew=0.6, env_cfg=None):
+def run_baseline(weather, ep_steps=None, ew=0.6, env_cfg=None, timestep_min=5):
     kw = _env_kwargs(env_cfg or {})
-    env = SimpleHVACEnv(weather, ew, ep_steps, **kw)
+    env = SimpleHVACEnv(weather, ew, ep_steps, timestep_min=timestep_min, **kw)
     obs, _ = env.reset()
     pi = PI()
     pi.reset()
     traj = []
     lo0, hi0, _ = env._sch(0)
     act = pi.act(env.Tin, lo0, hi0)
-    for _ in range(ep_steps):
+    for _ in range(env.ep):
         obs, r, _, done, info = env.step(act)
         lo, hi, _ = env._sch(env.step_n - 1)
         tin = info["zone_temperature_c"]
@@ -502,6 +520,11 @@ class Handler(BaseHTTPRequestHandler):
         total = int(cfg.get("timesteps", 50000))
         ew = float(cfg.get("energy_weight", 0.6))
         lr = float(cfg.get("lr", 3e-4))
+        timestep_min = int(cfg.get("timestep_min", 5))
+        gamma = float(cfg.get("gamma", 0.99))
+        tau = float(cfg.get("tau", 0.005))
+        buffer_size = int(cfg.get("buffer_size", 50000))
+        batch_size = int(cfg.get("batch_size", 256))
         continue_from = cfg.get("continue_from", None)
         prev_ts = 0
         if continue_from:
@@ -514,26 +537,29 @@ class Handler(BaseHTTPRequestHandler):
             model = None
         self.st.update(training=True, algo=algo, total=prev_ts + total, current=prev_ts,
                        rewards=[], comforts=[], energies=[], status="training", error=None,
-                       previous_timesteps=prev_ts)
-        threading.Thread(target=self._worker, args=(algo, total, ew, lr, model, prev_ts), daemon=True).start()
+                       previous_timesteps=prev_ts, timestep_min=timestep_min)
+        env_cfg = _env_kwargs(cfg)
+        threading.Thread(target=self._worker, args=(algo, total, ew, lr, model, prev_ts, timestep_min, gamma, tau, buffer_size, batch_size, env_cfg), daemon=True).start()
         self._json({"ok": True, "continued_from": continue_from})
 
-    def _worker(self, algo, total, ew, lr, existing_model=None, prev_ts=0):
+    def _worker(self, algo, total, ew, lr, existing_model=None, prev_ts=0, timestep_min=5,
+                gamma=0.99, tau=0.005, buffer_size=50000, batch_size=256, env_cfg=None):
         try:
-            env = Monitor(SimpleHVACEnv(self.weather, ew))
+            weather = load_weather(timestep_min)
+            env = Monitor(SimpleHVACEnv(weather, ew, timestep_min=timestep_min, **(env_cfg or {})))
             cb = CB(self.st)
             if existing_model is not None:
                 m = existing_model
                 m.set_env(env)
             elif algo == "SAC":
-                m = SAC("MlpPolicy", env, learning_rate=lr, buffer_size=50000,
-                        batch_size=256, gamma=0.99, tau=0.005, verbose=0)
+                m = SAC("MlpPolicy", env, learning_rate=lr, buffer_size=buffer_size,
+                        batch_size=batch_size, gamma=gamma, tau=tau, verbose=0)
             elif algo == "PPO":
                 m = PPO("MlpPolicy", env, learning_rate=lr, n_steps=256,
-                        batch_size=256, gamma=0.99, verbose=0)
+                        batch_size=batch_size, gamma=gamma, verbose=0)
             else:
-                m = DDPG("MlpPolicy", env, learning_rate=lr, buffer_size=50000,
-                         batch_size=256, gamma=0.99, tau=0.005, verbose=0)
+                m = DDPG("MlpPolicy", env, learning_rate=lr, buffer_size=buffer_size,
+                         batch_size=batch_size, gamma=gamma, tau=tau, verbose=0)
             m.learn(total_timesteps=total, callback=cb, reset_num_timesteps=existing_model is None)
             env.close()
 
@@ -547,7 +573,9 @@ class Handler(BaseHTTPRequestHandler):
                 "avg_energy": sum(en)/len(en) if en else 0,
             }
             total_ts = prev_ts + total
-            train_cfg = {"algo": algo, "timesteps": total_ts, "energy_weight": ew, "lr": lr}
+            train_cfg = {"algo": algo, "timesteps": total_ts, "energy_weight": ew, "lr": lr,
+                         "timestep_min": timestep_min, "gamma": gamma, "tau": tau,
+                         "buffer_size": buffer_size, "batch_size": batch_size}
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             name = f"{algo.lower()}_{ts}"
             save_agent(name, algo, m, metrics, train_cfg)
@@ -560,11 +588,12 @@ class Handler(BaseHTTPRequestHandler):
         if model is None:
             return self._json({"error": "No model trained yet"})
         ew = float(cfg.get("energy_weight", 0.6))
-        n = int(cfg.get("steps", 4032))
+        timestep_min = int(cfg.get("timestep_min", 5))
         env_cfg = _env_kwargs(cfg)
-        rl_traj = run_episode(model, self.weather, n, ew, env_cfg)
+        weather = load_weather(timestep_min)
+        rl_traj = run_episode(model, weather, ew=ew, env_cfg=env_cfg, timestep_min=timestep_min)
         rl_m = sim_metrics(rl_traj)
-        bl_traj = run_baseline(self.weather, n, ew, env_cfg)
+        bl_traj = run_baseline(weather, ew=ew, env_cfg=env_cfg, timestep_min=timestep_min)
         bl_m = sim_metrics(bl_traj)
         self.st.update(last_rl_traj=rl_traj, last_bl_traj=bl_traj)
         self._json(dict(
@@ -580,11 +609,12 @@ class Handler(BaseHTTPRequestHandler):
         if model is None:
             return self._json({"error": f"Agent '{name}' not found"})
         ew = float(cfg.get("energy_weight", 0.6))
-        n = int(cfg.get("steps", 4032))
+        timestep_min = int(cfg.get("timestep_min", 5))
         env_cfg = _env_kwargs(cfg)
-        rl_traj = run_episode(model, self.weather, n, ew, env_cfg)
+        weather = load_weather(timestep_min)
+        rl_traj = run_episode(model, weather, ew=ew, env_cfg=env_cfg, timestep_min=timestep_min)
         rl_m = sim_metrics(rl_traj)
-        bl_traj = run_baseline(self.weather, n, ew, env_cfg)
+        bl_traj = run_baseline(weather, ew=ew, env_cfg=env_cfg, timestep_min=timestep_min)
         bl_m = sim_metrics(bl_traj)
         self.st.update(last_rl_traj=rl_traj, last_bl_traj=bl_traj)
         self._json(dict(
@@ -620,6 +650,7 @@ class Handler(BaseHTTPRequestHandler):
         algo = cfg.get("algo", "SAC")
         base_ts = int(cfg.get("timesteps", 10000))
         ew = float(cfg.get("energy_weight", 0.6))
+        timestep_min = int(cfg.get("timestep_min", 5))
         lrs = cfg.get("learning_rates", [1e-4, 3e-4, 1e-3])
         gammas = cfg.get("gammas", [0.99])
         results = []
@@ -627,9 +658,10 @@ class Handler(BaseHTTPRequestHandler):
 
         def _sweep_worker():
             try:
+                weather = load_weather(timestep_min)
                 for lr in lrs:
                     for gamma in gammas:
-                        env = Monitor(SimpleHVACEnv(self.weather, ew))
+                        env = Monitor(SimpleHVACEnv(weather, ew, timestep_min=timestep_min))
                         cb = CB(self.st)
                         if algo == "SAC":
                             m = SAC("MlpPolicy", env, learning_rate=lr, buffer_size=50000,
@@ -655,7 +687,7 @@ class Handler(BaseHTTPRequestHandler):
                         }
                         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
                         name = f"sweep_{algo.lower()}_lr{lr:.0e}_g{gamma}_{ts}"
-                        save_agent(name, algo, m, metrics, {"algo": algo, "timesteps": base_ts, "energy_weight": ew, "lr": lr, "gamma": gamma})
+                        save_agent(name, algo, m, metrics, {"algo": algo, "timesteps": base_ts, "energy_weight": ew, "lr": lr, "gamma": gamma, "timestep_min": timestep_min})
                         Handler.sweep_state["completed"] += 1
                         Handler.sweep_state["results"].append(dict(name=name, lr=lr, gamma=gamma, metrics=metrics))
                 Handler.sweep_state["running"] = False
@@ -672,10 +704,10 @@ def main():
     print("=" * 50)
     print("  HVAC RL Control Platform")
     print("=" * 50)
-    weather = load_weather()
-    print(f"Loaded {len(weather)} rows of weather data (5-min intervals)")
+    weather = load_weather(5)
+    print(f"Loaded {len(weather)} rows of weather data (5-min default)")
     st = State()
-    bl = run_baseline(weather, 4032, 0.6)
+    bl = run_baseline(weather, ew=0.6, timestep_min=5)
     bl_m = sim_metrics(bl)
     bl_hours = list(range(len(bl)))
     bl_data = dict(trajectory=bl, metrics=bl_m, hours=bl_hours)

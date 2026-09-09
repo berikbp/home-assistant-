@@ -1,8 +1,0 @@
-==================================================
-  HVAC RL Control Platform
-==================================================
-Loaded 336 hours of weather data
-Baseline: comfort=75.3% energy=27.989 kWh/m2
-
-Open http://localhost:8888 in your browser
-

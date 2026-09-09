@@ -143,6 +143,11 @@ table.ct tr:hover{background:rgba(0,212,255,.03)}
       <div class="fg"><label>Timesteps</label><input id="inTimesteps" type="number" value="50000" min="1000" step="1000"></div>
       <div class="fg"><label>Energy Weight <span id="ewVal">0.6</span></label><input id="inEW" type="range" value="0.6" min="0" max="1" step="0.05" oninput="document.getElementById('ewVal').textContent=this.value"></div>
       <div class="fg"><label>Learning Rate</label><input id="inLR" type="number" value="0.0003" min="0.00001" max="0.01" step="0.0001"></div>
+      <div class="fg"><label>Timestep (min)</label><input id="inTimestep" type="number" value="5" min="1" max="60" step="1"></div>
+      <div class="fg"><label>Discount Factor (γ) <span id="gammaVal">0.99</span></label><input id="inGamma" type="range" value="0.99" min="0.90" max="0.999" step="0.001" oninput="document.getElementById('gammaVal').textContent=this.value"></div>
+      <div class="fg"><label>Tau (τ) <span id="tauVal">0.005</span></label><input id="inTau" type="range" value="0.005" min="0.001" max="0.05" step="0.001" oninput="document.getElementById('tauVal').textContent=this.value"></div>
+      <div class="fg"><label>Buffer Size</label><input id="inBuffer" type="number" value="50000" min="1000" step="1000"></div>
+      <div class="fg"><label>Batch Size</label><input id="inBatch" type="number" value="256" min="32" step="32"></div>
       <button class="btn btn-primary" id="btnTrain" onclick="startTrain()">Train Agent</button>
       <button class="btn btn-secondary" id="btnSim" onclick="simulate()">Simulate 14 Days</button>
       <button class="btn btn-compare" id="btnCompare" onclick="compareSelected()" disabled>Compare Selected</button>
@@ -164,6 +169,13 @@ table.ct tr:hover{background:rgba(0,212,255,.03)}
       <div class="fg"><label>Occupied Upper (°C) <span id="occHiVal">24</span></label><input id="inOccHi" type="range" value="24" min="20" max="30" step="0.5" oninput="document.getElementById('occHiVal').textContent=this.value"></div>
       <div class="fg"><label>Unoccupied Lower (°C) <span id="unoccLoVal">15</span></label><input id="inUnoccLo" type="range" value="15" min="10" max="20" step="0.5" oninput="document.getElementById('unoccLoVal').textContent=this.value"></div>
       <div class="fg"><label>Unoccupied Upper (°C) <span id="unoccHiVal">30</span></label><input id="inUnoccHi" type="range" value="30" min="25" max="40" step="0.5" oninput="document.getElementById('unoccHiVal').textContent=this.value"></div>
+
+      <div class="section-title">Building Parameters</div>
+      <div class="fg"><label>Thermal Capacitance (C) <span id="cVal">2.0</span></label><input id="inC" type="range" value="2.0" min="0.5" max="10" step="0.1" oninput="document.getElementById('cVal').textContent=this.value"></div>
+      <div class="fg"><label>Thermal Resistance (R) <span id="rVal">5.0</span></label><input id="inR" type="range" value="5.0" min="1" max="20" step="0.5" oninput="document.getElementById('rVal').textContent=this.value"></div>
+      <div class="fg"><label>Solar Absorptivity (α) <span id="alphaVal">0.15</span></label><input id="inAlpha" type="range" value="0.15" min="0.05" max="0.9" step="0.05" oninput="document.getElementById('alphaVal').textContent=this.value"></div>
+      <div class="fg"><label>Floor Area (m²) <span id="aVal">48</span></label><input id="inA" type="range" value="48" min="10" max="200" step="1" oninput="document.getElementById('aVal').textContent=this.value"></div>
+      <div class="fg"><label>HVAC Coefficient (K_u) <span id="kuVal">0.3</span></label><input id="inKu" type="range" value="0.3" min="0.05" max="2.0" step="0.05" oninput="document.getElementById('kuVal').textContent=this.value"></div>
 
       <div class="section-title">Cost Analysis</div>
       <div class="fg"><label>Electricity Price ($/kWh) <span id="priceVal">0.12</span></label><input id="inPrice" type="range" value="0.12" min="0.01" max="0.50" step="0.01" oninput="document.getElementById('priceVal').textContent=this.value"></div>
@@ -259,7 +271,12 @@ function getEnvCfg(){
     occ_setpoint_lower:parseFloat(document.getElementById('inOccLo').value),
     occ_setpoint_upper:parseFloat(document.getElementById('inOccHi').value),
     unocc_setpoint_lower:parseFloat(document.getElementById('inUnoccLo').value),
-    unocc_setpoint_upper:parseFloat(document.getElementById('inUnoccHi').value)
+    unocc_setpoint_upper:parseFloat(document.getElementById('inUnoccHi').value),
+    building_C:parseFloat(document.getElementById('inC').value),
+    building_R:parseFloat(document.getElementById('inR').value),
+    building_alpha:parseFloat(document.getElementById('inAlpha').value),
+    building_A:parseFloat(document.getElementById('inA').value),
+    building_K_u:parseFloat(document.getElementById('inKu').value)
   };
 }
 
@@ -425,7 +442,13 @@ async function startTrain(continueFrom){
   sm.className='status-msg show training';sm.textContent=continueFrom?'Continuing from '+continueFrom+'...':'Training started...';
   document.getElementById('badge').className='badge training';document.getElementById('badge').textContent='Training';
   const body={algo:selectedAlgo,timesteps:parseInt(document.getElementById('inTimesteps').value),
-    energy_weight:parseFloat(document.getElementById('inEW').value),lr:parseFloat(document.getElementById('inLR').value)};
+    energy_weight:parseFloat(document.getElementById('inEW').value),lr:parseFloat(document.getElementById('inLR').value),
+    timestep_min:parseInt(document.getElementById('inTimestep').value),
+    gamma:parseFloat(document.getElementById('inGamma').value),
+    tau:parseFloat(document.getElementById('inTau').value),
+    buffer_size:parseInt(document.getElementById('inBuffer').value),
+    batch_size:parseInt(document.getElementById('inBatch').value),
+    ...getEnvCfg()};
   if(continueFrom)body.continue_from=continueFrom;
   await fetch('/api/train',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   pollTimer=setInterval(pollStatus,1000);
@@ -460,7 +483,7 @@ async function simulate(){
   const btn=document.getElementById('btnSim');btn.disabled=true;
   const sm=document.getElementById('statusMsg');sm.className='status-msg show training';sm.textContent='Simulating 14 days...';
   try{
-    const cfg={energy_weight:parseFloat(document.getElementById('inEW').value),steps:336,...getEnvCfg()};
+    const cfg={energy_weight:parseFloat(document.getElementById('inEW').value),timestep_min:parseInt(document.getElementById('inTimestep').value),...getEnvCfg()};
     const r=await fetch('/api/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
     const d=await r.json();
     if(d.error){sm.className='status-msg show error';sm.textContent=d.error;btn.disabled=false;return;}
@@ -490,7 +513,7 @@ function updateCompareBtn(){document.getElementById('btnCompare').disabled=docum
 async function simSaved(name){
   const sm=document.getElementById('statusMsg');sm.className='status-msg show training';sm.textContent='Simulating: '+name+'...';
   try{
-    const cfg={name:name,energy_weight:parseFloat(document.getElementById('inEW').value),steps:336,...getEnvCfg()};
+    const cfg={name:name,energy_weight:parseFloat(document.getElementById('inEW').value),timestep_min:parseInt(document.getElementById('inTimestep').value),...getEnvCfg()};
     const r=await fetch('/api/simulate-saved',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
     const d=await r.json();
     if(d.error){sm.className='status-msg show error';sm.textContent=d.error;return;}
@@ -510,7 +533,7 @@ async function compareSelected(){
   if(checked.length<2)return;
   const sm=document.getElementById('statusMsg');sm.className='status-msg show training';sm.textContent='Comparing '+checked.length+' agents...';
   try{
-    const cfg={names:checked,energy_weight:parseFloat(document.getElementById('inEW').value),steps:336,...getEnvCfg()};
+    const cfg={names:checked,energy_weight:parseFloat(document.getElementById('inEW').value),timestep_min:parseInt(document.getElementById('inTimestep').value),...getEnvCfg()};
     const r=await fetch('/api/agents/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
     const d=await r.json();
     if(d.error||!d.agents||!d.agents.length){sm.className='status-msg show error';sm.textContent=d.error||'No agents';return;}
@@ -538,6 +561,12 @@ async function startSweep(){
   try{
     const body={algo:selectedAlgo,timesteps:parseInt(document.getElementById('inTimesteps').value),
       energy_weight:parseFloat(document.getElementById('inEW').value),
+      timestep_min:parseInt(document.getElementById('inTimestep').value),
+      gamma:parseFloat(document.getElementById('inGamma').value),
+      tau:parseFloat(document.getElementById('inTau').value),
+      buffer_size:parseInt(document.getElementById('inBuffer').value),
+      batch_size:parseInt(document.getElementById('inBatch').value),
+      ...getEnvCfg(),
       learning_rates:[0.0001,0.0003,0.001],gammas:[0.95,0.99]};
     const r=await fetch('/api/sweep',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
