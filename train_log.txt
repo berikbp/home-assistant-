@@ -1,0 +1,119 @@
+============================================================
+  Training SAC 100k (LR=3e-4)
+============================================================
+Using cpu device
+Wrapping the env in a DummyVecEnv.
+----------------------------------
+| rollout/           |           |
+|    ep_len_mean     | 4.03e+03  |
+|    ep_rew_mean     | -2.38e+06 |
+| time/              |           |
+|    episodes        | 4         |
+|    fps             | 51        |
+|    time_elapsed    | 313       |
+|    total_timesteps | 16128     |
+| train/             |           |
+|    actor_loss      | 3.53e+04  |
+|    critic_loss     | 5.42e+05  |
+|    ent_coef        | 39        |
+|    ent_coef_loss   | -1.64     |
+|    learning_rate   | 0.0003    |
+|    n_updates       | 16027     |
+----------------------------------
+----------------------------------
+| rollout/           |           |
+|    ep_len_mean     | 4.03e+03  |
+|    ep_rew_mean     | -1.81e+06 |
+| time/              |           |
+|    episodes        | 8         |
+|    fps             | 51        |
+|    time_elapsed    | 632       |
+|    total_timesteps | 32256     |
+| train/             |           |
+|    actor_loss      | 4.12e+04  |
+|    critic_loss     | 5.32e+05  |
+|    ent_coef        | 50.4      |
+|    ent_coef_loss   | 0.215     |
+|    learning_rate   | 0.0003    |
+|    n_updates       | 32155     |
+----------------------------------
+----------------------------------
+| rollout/           |           |
+|    ep_len_mean     | 4.03e+03  |
+|    ep_rew_mean     | -1.62e+06 |
+| time/              |           |
+|    episodes        | 12        |
+|    fps             | 50        |
+|    time_elapsed    | 957       |
+|    total_timesteps | 48384     |
+| train/             |           |
+|    actor_loss      | 4.44e+04  |
+|    critic_loss     | 9.81e+05  |
+|    ent_coef        | 55.2      |
+|    ent_coef_loss   | 1.07      |
+|    learning_rate   | 0.0003    |
+|    n_updates       | 48283     |
+----------------------------------
+----------------------------------
+| rollout/           |           |
+|    ep_len_mean     | 4.03e+03  |
+|    ep_rew_mean     | -1.53e+06 |
+| time/              |           |
+|    episodes        | 16        |
+|    fps             | 49        |
+|    time_elapsed    | 1302      |
+|    total_timesteps | 64512     |
+| train/             |           |
+|    actor_loss      | 4.98e+04  |
+|    critic_loss     | 1.03e+06  |
+|    ent_coef        | 51.8      |
+|    ent_coef_loss   | 0.0886    |
+|    learning_rate   | 0.0003    |
+|    n_updates       | 64411     |
+----------------------------------
+----------------------------------
+| rollout/           |           |
+|    ep_len_mean     | 4.03e+03  |
+|    ep_rew_mean     | -1.49e+06 |
+| time/              |           |
+|    episodes        | 20        |
+|    fps             | 49        |
+|    time_elapsed    | 1625      |
+|    total_timesteps | 80640     |
+| train/             |           |
+|    actor_loss      | 4.59e+04  |
+|    critic_loss     | 5.17e+05  |
+|    ent_coef        | 41.2      |
+|    ent_coef_loss   | 0.848     |
+|    learning_rate   | 0.0003    |
+|    n_updates       | 80539     |
+----------------------------------
+----------------------------------
+| rollout/           |           |
+|    ep_len_mean     | 4.03e+03  |
+|    ep_rew_mean     | -1.49e+06 |
+| time/              |           |
+|    episodes        | 24        |
+|    fps             | 49        |
+|    time_elapsed    | 1943      |
+|    total_timesteps | 96768     |
+| train/             |           |
+|    actor_loss      | 4.51e+04  |
+|    critic_loss     | 5.87e+05  |
+|    ent_coef        | 37.7      |
+|    ent_coef_loss   | 1.16      |
+|    learning_rate   | 0.0003    |
+|    n_updates       | 96667     |
+----------------------------------
+
+============================================================
+  SAC 100k vs Baseline
+============================================================
+Metric                        Baseline     RL Agent        Delta
+------------------------------------------------------------
+Comfort Score                   81.77%       81.75%       -0.02% LOSE
+Energy (kWh/m2)                 343.66       328.68       -14.98 WIN
+Discomfort (Kh)                1544.79      1956.49      +411.70 LOSE
+Total Reward               -1109367.76  -1344022.37   -234654.61 LOSE
+Energy Cost               $      41.24 $      39.44 $      -1.80 WIN
+============================================================

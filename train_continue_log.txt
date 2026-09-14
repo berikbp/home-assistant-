@@ -1,0 +1,87 @@
+
+============================================================
+  Continuing sac_20260911_154532 (50000 steps -> 100000)
+  ew=0.6, lr=0.0003
+============================================================
+Saved: sac_20260911_154532_cont_100000
+
+  sac_20260911_154532_cont_100000 vs Baseline:
+  Metric                 Baseline         RL      Delta      
+  -------------------------------------------------------
+  Comfort                  81.89%     75.17%     -6.72% LOSE
+  Energy                   343.42     320.13     -23.29 WIN
+  Discomfort              1543.25    2253.17    +709.92 LOSE
+  Reward               -1108321.93 -1514408.15 -406086.22 LOSE
+  Cost                     $41.21     $38.42     $-2.79 WIN
+
+============================================================
+  Continuing sac_30k_fresh (30000 steps -> 80000)
+  ew=0.6, lr=0.0003
+============================================================
+Wrapping the env in a DummyVecEnv.
+----------------------------------
+| rollout/           |           |
+|    ep_len_mean     | 4.03e+03  |
+|    ep_rew_mean     | -1.85e+06 |
+| time/              |           |
+|    episodes        | 8         |
+|    fps             | 54        |
+|    time_elapsed    | 73        |
+|    total_timesteps | 34032     |
+| train/             |           |
+|    actor_loss      | 5.32e+04  |
+|    critic_loss     | 6.66e+05  |
+|    ent_coef        | 80.3      |
+|    ent_coef_loss   | -0.0597   |
+|    learning_rate   | 0.0003    |
+|    n_updates       | 33931     |
+----------------------------------
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 4.03e+03 |
+|    ep_rew_mean     | -1.7e+06 |
+| time/              |          |
+|    episodes        | 12       |
+|    fps             | 56       |
+|    time_elapsed    | 358      |
+|    total_timesteps | 50160    |
+| train/             |          |
+|    actor_loss      | 5.24e+04 |
+|    critic_loss     | 8.66e+05 |
+|    ent_coef        | 34.5     |
+|    ent_coef_loss   | -0.348   |
+|    learning_rate   | 0.0003   |
+|    n_updates       | 50059    |
+---------------------------------
+----------------------------------
+| rollout/           |           |
+|    ep_len_mean     | 4.03e+03  |
+|    ep_rew_mean     | -1.65e+06 |
+| time/              |           |
+|    episodes        | 16        |
+|    fps             | 55        |
+|    time_elapsed    | 649       |
+|    total_timesteps | 66288     |
+| train/             |           |
+|    actor_loss      | 4.82e+04  |
+|    critic_loss     | 1.07e+06  |
+|    ent_coef        | 57.4      |
+|    ent_coef_loss   | 1.57      |
+|    learning_rate   | 0.0003    |
+|    n_updates       | 66187     |
+----------------------------------
+Saved: sac_30k_fresh_cont_80000
+
+  sac_30k_fresh_cont_80000 vs Baseline:
+  Metric                 Baseline         RL      Delta      
+  -------------------------------------------------------
+  Comfort                  81.77%     81.77%     +0.00% LOSE
+  Energy                   344.09     338.00      -6.09 WIN
+  Discomfort              1548.68    2318.77    +770.09 LOSE
+  Reward               -1111913.22 -1563395.09 -451481.87 LOSE
+  Cost                     $41.29     $40.56     $-0.73 WIN
+
+Done.
+10 WIN
+
+Done.
